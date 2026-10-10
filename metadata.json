@@ -1,0 +1,6 @@
+{
+  "name": "IBADAN LIFE",
+  "description": "Mobile-first 3D open-world Nigerian life simulation game set in the Bodija & UI corridor of Ibadan, Oyo State.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
