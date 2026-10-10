@@ -88,6 +88,14 @@ export interface JobMission {
   description: string;
 }
 
+export interface LandmarkLocation {
+  name: string;
+  type: string;
+  x: number;
+  z: number;
+  color: string;
+}
+
 export interface InteractionPrompt {
   id: string;
   type: 'vehicle' | 'market_stall' | 'job' | 'home' | 'atm' | 'buka' | 'suya';

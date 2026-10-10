@@ -39,6 +39,8 @@ export default function App() {
   });
   const isPointerDownRef = useRef<boolean>(false);
   const lastPointerPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const lastPromptIdRef = useRef<string | null>(null);
+  const lastDistrictRef = useRef<string>('UI Main Gate & Campus Axis');
 
   // Reactive UI States
   const [stats, setStats] = useState(engineRef.current.stats);
@@ -140,6 +142,19 @@ export default function App() {
     const multiplayer = new MultiplayerManager(scene);
     multiplayerRef.current = multiplayer;
 
+    // Pulsing Green Destination Ring Marker on Ground
+    const destMarkerGeo = new THREE.RingGeometry(0.35, 0.75, 32);
+    destMarkerGeo.rotateX(-Math.PI / 2);
+    const destMarkerMat = new THREE.MeshBasicMaterial({
+      color: 0x10b981,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0,
+    });
+    const destMarker = new THREE.Mesh(destMarkerGeo, destMarkerMat);
+    destMarker.position.set(0, 0.06, 0);
+    scene.add(destMarker);
+
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -174,12 +189,19 @@ export default function App() {
 
     // Mouse / Pointer Camera Orbit & Tap-to-Move
     const pointerDownPos = { x: 0, y: 0 };
+    let pointerDownTime = 0;
+
     const handlePointerDown = (e: PointerEvent) => {
-      if ((e.target as HTMLElement).closest('button, input, form, [role="button"]')) return;
+      const target = e.target as HTMLElement | null;
+      // Do not capture if pointer is over any interactive UI, button, or modal
+      if (!target || target.closest('button, input, form, [role="button"], .pointer-events-auto')) {
+        return;
+      }
       isPointerDownRef.current = true;
       lastPointerPosRef.current = { x: e.clientX, y: e.clientY };
       pointerDownPos.x = e.clientX;
       pointerDownPos.y = e.clientY;
+      pointerDownTime = performance.now();
     };
 
     const handlePointerMove = (e: PointerEvent) => {
@@ -188,19 +210,23 @@ export default function App() {
       const deltaY = e.clientY - lastPointerPosRef.current.y;
       lastPointerPosRef.current = { x: e.clientX, y: e.clientY };
 
-      cameraOrbitRef.current.angleY -= deltaX * 0.005;
-      cameraOrbitRef.current.angleX = THREE.MathUtils.clamp(
-        cameraOrbitRef.current.angleX - deltaY * 0.004,
-        0.05,
-        1.1
-      );
+      if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 4) {
+        cameraOrbitRef.current.angleY -= deltaX * 0.005;
+        cameraOrbitRef.current.angleX = THREE.MathUtils.clamp(
+          cameraOrbitRef.current.angleX - deltaY * 0.004,
+          0.05,
+          1.1
+        );
+      }
     };
 
     const handlePointerUp = (e: PointerEvent) => {
       if (isPointerDownRef.current) {
         const movedDist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
-        // If it was a quick click/tap without drag, Raycast to walk to ground position!
-        if (movedDist < 10 && characterRef.current && !characterRef.current.isDriving) {
+        const pressDuration = performance.now() - pointerDownTime;
+
+        // Quick click/tap on 3D ground without drag -> Tap-to-Move!
+        if (movedDist < 10 && pressDuration < 350 && characterRef.current && !characterRef.current.isDriving) {
           const mouse = new THREE.Vector2(
             (e.clientX / window.innerWidth) * 2 - 1,
             -(e.clientY / window.innerHeight) * 2 + 1
@@ -213,6 +239,8 @@ export default function App() {
             const targetX = THREE.MathUtils.clamp(intersectPoint.x, -260, 260);
             const targetZ = THREE.MathUtils.clamp(intersectPoint.z, -260, 260);
             characterRef.current.setDestination(targetX, targetZ);
+            destMarker.position.set(targetX, 0.06, targetZ);
+            destMarkerMat.opacity = 0.95;
             sounds.playFootstep();
           }
         }
@@ -227,13 +255,26 @@ export default function App() {
     // Main Game Loop
     let clock = new THREE.Clock();
     let animFrameId: number;
+    let lastUiSyncTime = 0;
+    let lastStatsSyncTime = 0;
+    let lastPlayerPos = { x: -6, z: -135 };
+    let lastSpeed = 0;
 
     const gameLoop = () => {
       animFrameId = requestAnimationFrame(gameLoop);
       const dt = Math.min(clock.getDelta(), 0.06);
+      const now = performance.now();
 
       // Advance 4D life simulation needs & time advancement
       engineRef.current.tickNeeds(dt);
+
+      // Destination Marker pulsing & fade
+      if (destMarkerMat.opacity > 0.01) {
+        destMarker.rotation.y += dt * 3.5;
+        if (!character.targetDestination) {
+          destMarkerMat.opacity = Math.max(0, destMarkerMat.opacity - dt * 4);
+        }
+      }
 
       // Dynamic 4D Day/Night Sun & Sky Lighting Modulation
       const curHour = engineRef.current.stats.gameHour || 14;
@@ -285,8 +326,10 @@ export default function App() {
         );
         character.update(dt, { forward: 0, strafe: 0, sprint: false, jump: false }, 0, []);
 
-        setVehicleSpeed(veh.speed);
-        setPlayerPos({ x: veh.position.x, z: veh.position.z });
+        if (Math.abs(veh.speed - lastSpeed) >= 1.0) {
+          lastSpeed = veh.speed;
+          setVehicleSpeed(veh.speed);
+        }
       } else {
         character.update(
           dt,
@@ -300,8 +343,10 @@ export default function App() {
           district.collisionBoxes
         );
 
-        setVehicleSpeed(0);
-        setPlayerPos({ x: character.position.x, z: character.position.z });
+        if (lastSpeed !== 0) {
+          lastSpeed = 0;
+          setVehicleSpeed(0);
+        }
       }
 
       traffic.update(dt);
@@ -329,14 +374,29 @@ export default function App() {
       camera.position.set(camX, camY, camZ);
       camera.lookAt(targetPos.x, targetPos.y + (character.isDriving ? 1.4 : 1.7), targetPos.z);
 
+      // Throttled UI Player Position Sync (Every 120ms or significant displacement)
+      const dX = targetPos.x - lastPlayerPos.x;
+      const dZ = targetPos.z - lastPlayerPos.z;
+      if (dX * dX + dZ * dZ > 0.36 || now - lastUiSyncTime > 130) {
+        lastPlayerPos = { x: targetPos.x, z: targetPos.z };
+        setPlayerPos({ x: targetPos.x, z: targetPos.z });
+        lastUiSyncTime = now;
+      }
+
+      // Periodic Stats Sync to React UI (Every 1.2s to prevent 60FPS re-rendering)
+      if (now - lastStatsSyncTime > 1200) {
+        lastStatsSyncTime = now;
+        setStats({ ...engineRef.current.stats });
+      }
+
       checkInteractionPrompts(targetPos);
 
       // Active Job Dropoff Check
       if (engineRef.current.activeJob) {
         const job = engineRef.current.activeJob;
-        const dx = targetPos.x - job.dropoffPos[0];
-        const dz = targetPos.z - job.dropoffPos[2];
-        const distToDropoff = Math.sqrt(dx * dx + dz * dz);
+        const jx = targetPos.x - job.dropoffPos[0];
+        const jz = targetPos.z - job.dropoffPos[2];
+        const distToDropoff = Math.sqrt(jx * jx + jz * jz);
         if (distToDropoff < 9) {
           const reward = engineRef.current.completeActiveJob();
           if (reward) refreshUI();
@@ -374,6 +434,8 @@ export default function App() {
   }, [refreshUI]);
 
   const checkInteractionPrompts = (pos: THREE.Vector3) => {
+    let nearestPrompt: InteractionPrompt | null = null;
+
     if (vehicleRef.current) {
       const vehPos = vehicleRef.current.position;
       const dX = pos.x - vehPos.x;
@@ -382,34 +444,29 @@ export default function App() {
 
       if (distToVeh < 3.8 && !characterRef.current?.isDriving) {
         setCanEnterVehicle(true);
-        setPrompt({
+        nearestPrompt = {
           id: 'prompt_enter_vehicle',
           type: 'vehicle',
           title: 'Ibadan Nissan Micra Taxi',
           subtitle: 'Enter driver seat to cruise Bodija & UI axis',
           actionKey: 'E',
           distance: distToVeh,
-        });
-        return;
+        };
       } else {
         setCanEnterVehicle(false);
       }
     }
 
     if (characterRef.current?.isDriving) {
-      setPrompt({
+      nearestPrompt = {
         id: 'prompt_exit_vehicle',
         type: 'vehicle',
         title: 'Exit Micra Taxi',
         subtitle: 'Step out onto Ibadan street',
         actionKey: 'E',
         distance: 0,
-      });
-      return;
-    }
-
-    if (districtRef.current) {
-      let nearestPrompt: InteractionPrompt | null = null;
+      };
+    } else if (!nearestPrompt && districtRef.current) {
       let minDistance = 999;
 
       districtRef.current.interactiveHotspots.forEach((spot) => {
@@ -430,24 +487,33 @@ export default function App() {
           };
         }
       });
+    }
 
+    // Only update React state if prompt ID changed!
+    if (nearestPrompt?.id !== lastPromptIdRef.current) {
+      lastPromptIdRef.current = nearestPrompt?.id || null;
       setPrompt(nearestPrompt);
     }
   };
 
   const updateDistrictName = (pos: THREE.Vector3) => {
+    let newDistrict = 'UI - Secretariat Boulevard';
     if (pos.z < -100) {
-      setCurrentDistrict('UI Main Gate & Campus Axis');
-    } else if (pos.x > 30 && pos.z < 20) {
-      setCurrentDistrict('Bodija Wholesale Food Market');
-    } else if (pos.x < -30 && pos.z < 20) {
-      setCurrentDistrict('Agbowo Commercial Strip');
-    } else if (pos.x > 30 && pos.z > 80) {
-      setCurrentDistrict('New Bodija Residential Estate');
-    } else if (pos.x < -30 && pos.z > 50) {
-      setCurrentDistrict('Ventura & Bovas Strip');
-    } else {
-      setCurrentDistrict('UI - Secretariat Boulevard');
+      newDistrict = 'UI Main Gate & Campus Axis';
+    } else if (pos.x > 15 && pos.z < 20) {
+      newDistrict = 'Bodija Wholesale Food Market';
+    } else if (pos.x < -15 && pos.z < 20) {
+      newDistrict = 'Agbowo Commercial Strip';
+    } else if (pos.x > 15 && pos.z > 50) {
+      newDistrict = 'New Bodija Residential Estate';
+    } else if (pos.x < -15 && pos.z > 50) {
+      newDistrict = 'Ventura & Bovas Strip';
+    }
+
+    // Only update React state if district changed!
+    if (newDistrict !== lastDistrictRef.current) {
+      lastDistrictRef.current = newDistrict;
+      setCurrentDistrict(newDistrict);
     }
   };
 

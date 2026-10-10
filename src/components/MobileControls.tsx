@@ -43,11 +43,13 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   const activePointerId = useRef<number | null>(null);
 
   // Directional button helpers
-  const handleButtonDir = (forward: number, strafe: number) => {
+  const handleButtonDir = (forward: number, strafe: number, e?: React.PointerEvent) => {
+    if (e) e.stopPropagation();
     onDirectionInput(strafe, forward);
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     activePointerId.current = e.pointerId;
     setIsDragging(true);
@@ -55,6 +57,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
+    e.stopPropagation();
     if (!isDragging || !joystickRef.current) return;
     const rect = joystickRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -81,6 +84,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    e.stopPropagation();
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {

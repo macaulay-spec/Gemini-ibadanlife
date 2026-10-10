@@ -255,14 +255,14 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       )}
 
-      {/* 5. CIRCULAR MINI-MAP & HEALTH/ENERGY BARS */}
-      <div className="absolute bottom-16 left-4 z-20 pointer-events-auto flex flex-col gap-1.5">
-        <div className="bg-slate-950/90 backdrop-blur-md border border-white/15 px-3 py-1 rounded-xl shadow-xl max-w-[200px]">
+      {/* 5. TOP-LEFT CIRCULAR MINI-MAP & HEALTH/ENERGY BARS (Unobstructed by Mobile Controls) */}
+      <div className="absolute top-18 left-3 z-20 pointer-events-auto flex flex-col gap-1">
+        <div className="bg-slate-950/90 backdrop-blur-md border border-white/15 px-2.5 py-1 rounded-xl shadow-xl max-w-[190px]">
           <div className="text-[11px] font-black uppercase tracking-wider text-slate-100 truncate">
             {currentDistrict}
           </div>
           <div className="text-[9px] text-amber-400 font-mono uppercase tracking-widest -mt-0.5">
-            IBADAN NORTH · OYO
+            IBADAN NORTH · LIVE GPS
           </div>
         </div>
 
@@ -270,7 +270,7 @@ export const HUD: React.FC<HUDProps> = ({
           {/* Circular Radar */}
           <div
             onClick={onOpenMap}
-            className="relative w-24 h-24 rounded-full bg-slate-950/90 backdrop-blur-md border-2 border-slate-700/80 shadow-2xl overflow-hidden cursor-pointer hover:border-amber-400 transition-colors"
+            className="relative w-22 h-22 rounded-full bg-slate-950/90 backdrop-blur-md border-2 border-slate-700/80 shadow-2xl overflow-hidden cursor-pointer hover:border-amber-400 transition-colors"
             title="Click to open full map (M)"
           >
             <svg viewBox="0 0 100 100" className="w-full h-full">
@@ -316,13 +316,13 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
 
           {/* Quick Health & Energy Bars */}
-          <div className="flex flex-col gap-1.5 w-20">
+          <div className="flex flex-col gap-1 w-18">
             <div className="space-y-0.5">
               <div className="flex items-center justify-between text-[9px] font-mono text-emerald-400">
                 <span className="font-bold">HP</span>
                 <span>{stats.health}</span>
               </div>
-              <div className="w-full bg-slate-900 border border-white/10 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-slate-900 border border-white/10 rounded-full h-1.5 overflow-hidden">
                 <div
                   className="bg-emerald-500 h-full rounded-full transition-all duration-300 shadow-sm"
                   style={{ width: `${stats.health}%` }}
@@ -335,7 +335,7 @@ export const HUD: React.FC<HUDProps> = ({
                 <span className="font-bold">NRG</span>
                 <span>{Math.round(stats.energy)}</span>
               </div>
-              <div className="w-full bg-slate-900 border border-white/10 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-slate-900 border border-white/10 rounded-full h-1.5 overflow-hidden">
                 <div
                   className="bg-blue-500 h-full rounded-full transition-all duration-300 shadow-sm"
                   style={{ width: `${stats.energy}%` }}

@@ -197,42 +197,88 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({
             <div className="py-4 space-y-3">
               {engine.homes.some((h) => h.isRented) ? (
                 <>
-                  <div className="bg-emerald-950/40 border border-emerald-500/30 p-4 rounded-2xl space-y-2">
-                    <span className="text-xs font-bold text-emerald-300">Your Private Apartment</span>
-                    <p className="text-xs text-slate-300">
-                      Sleep in bed to restore 100% Health & Energy, and lie low to reduce police wanted records!
-                    </p>
-                    <button
-                      onClick={() => {
-                        const res = engine.sleepAndRest();
-                        notify(res.message);
-                      }}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-2"
-                    >
-                      <Bed className="w-4 h-4" />
-                      Sleep in Bed (Refill 100% Energy)
-                    </button>
+                  <div className="bg-emerald-950/40 border border-emerald-500/30 p-3.5 rounded-2xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-300">Your Rented Bodija Flat</span>
+                      <span className="text-[10px] text-amber-400 font-mono">
+                        Fuel: {engine.stats.generatorFuel}% · {engine.stats.nepaGridActive ? 'Grid Power' : 'Genny'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => {
+                          const res = engine.sleepAndRest();
+                          notify(res.message);
+                        }}
+                        className="py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5"
+                      >
+                        <Bed className="w-4 h-4" />
+                        Sleep (100% Energy)
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const res = engine.takeShower();
+                          notify(res.message);
+                        }}
+                        className="py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Take Shower (Hygiene)
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const res = engine.useRestroom();
+                          notify(res.message);
+                        }}
+                        className="py-2.5 bg-purple-600 hover:bg-purple-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5"
+                      >
+                        Restroom (Bladder)
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const res = engine.buyGeneratorFuel();
+                          notify(res.message);
+                        }}
+                        className="py-2.5 bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5"
+                      >
+                        Fuel Genny (₦4,500)
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="bg-slate-950/60 border border-white/10 p-3 rounded-2xl text-xs text-slate-400">
-                    Apartment furniture: Bed, Wardrobe, Generator power, Safe storage.
+                  <div className="bg-slate-950/60 border border-white/10 p-2.5 rounded-2xl text-[11px] text-slate-400">
+                    Compound Features: Water Tank, Security Gate, Safe Parking, Mikano Generator.
                   </div>
                 </>
               ) : (
                 <div className="bg-slate-950/80 border border-white/10 p-4 rounded-2xl space-y-3 text-center">
                   <p className="text-xs text-slate-300">
-                    You have not rented this property yet! Rent a room in Agbowo or an apartment in New Bodija using your phone.
+                    You have not rented this property yet! Rent a flat in New Bodija or Agbowo lodge to unlock a safehouse, sleep, and shower.
                   </p>
-                  <button
-                    onClick={() => {
-                      // Rent Agbowo lodge directly
-                      const res = engine.rentHome('home_agbowo');
-                      notify(res.message);
-                    }}
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg"
-                  >
-                    Rent Agbowo Lodge Now (₦17,500/wk)
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => {
+                        const res = engine.rentHome('home_bodija');
+                        notify(res.message);
+                      }}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg"
+                    >
+                      Rent Bodija 2-Bed Duplex Flat (₦60,000/wk)
+                    </button>
+                    <button
+                      onClick={() => {
+                        const res = engine.rentHome('home_agbowo');
+                        notify(res.message);
+                      }}
+                      className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl"
+                    >
+                      Rent Budget Agbowo Student Room (₦17,500/wk)
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
